@@ -32,6 +32,38 @@ class ViewKelas extends ManageRelatedRecords
         return 'Detail Siswa - ' . ($this->record->nama ?? '');
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            CreateAction::make()
+                ->label('Buat Akun Siswa')
+                ->modalHeading('Buat Akun Siswa')
+                ->createAnother(false)
+                ->modalSubmitActionLabel('Buat')
+                ->modalCancelActionLabel('Batal')
+                ->using(function (array $data): User {
+                    if (User::where('username', $data['nis'])->exists()) {
+                        Notification::make()
+                            ->title('NIS sudah dipakai')
+                            ->body('NIS ini sudah terdaftar sebagai username akun lain.')
+                            ->danger()
+                            ->send();
+
+                        throw new \Exception('NIS sudah dipakai.');
+                    }
+
+                    return User::create([
+                        'name' => $data['name'],
+                        'nis' => $data['nis'],
+                        'kelas_id' => $this->record->id,
+                        'role' => 'siswa',
+                        'username' => $data['nis'],
+                        'password' => Hash::make($data['nis']),
+                    ]);
+                }),
+        ];
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([
@@ -75,34 +107,6 @@ class ViewKelas extends ManageRelatedRecords
                     ->label('NIS')
                     ->searchable()
                     ->sortable(),
-            ])
-            ->headerActions([
-                CreateAction::make()
-                    ->label('Buat Akun Siswa')
-                    ->modalHeading('Buat Akun Siswa')
-                    ->createAnother(false)
-                    ->modalSubmitActionLabel('Buat')
-                    ->modalCancelActionLabel('Batal')
-                    ->using(function (array $data): User {
-                        if (User::where('username', $data['nis'])->exists()) {
-                            Notification::make()
-                                ->title('NIS sudah dipakai')
-                                ->body('NIS ini sudah terdaftar sebagai username akun lain.')
-                                ->danger()
-                                ->send();
-
-                            return new User();
-                        }
-
-                        return User::create([
-                            'name' => $data['name'],
-                            'nis' => $data['nis'],
-                            'kelas_id' => $this->record->id,
-                            'role' => 'siswa',
-                            'username' => $data['nis'],
-                            'password' => Hash::make($data['nis']),
-                        ]);
-                    }),
             ])
             ->recordActions([
                 EditAction::make()

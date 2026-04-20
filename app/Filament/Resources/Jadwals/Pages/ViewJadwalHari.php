@@ -62,9 +62,25 @@ class ViewJadwalHari extends Page implements Tables\Contracts\HasTable
         return [
             Action::make('kembali')
                 ->label('Kembali')
+                ->icon('heroicon-o-arrow-left')
+                ->color('gray')
                 ->url(JadwalResource::getUrl('view', [
                     'record' => $this->kelas,
                 ])),
+
+            CreateAction::make()
+                ->label('Tambah Jadwal')
+                ->modalHeading('Tambah Jadwal ' . $this->formatHari($this->hari))
+                ->schema($this->getFormSchema())
+                ->createAnother(false)
+                ->modalSubmitActionLabel('Simpan')
+                ->modalCancelActionLabel('Batal')
+                ->using(function (array $data): Jadwal {
+                    $data['kelas_id'] = $this->kelas->id;
+                    $data['hari'] = $this->hari;
+
+                    return Jadwal::create($data);
+                }),
         ];
     }
 
@@ -182,21 +198,6 @@ class ViewJadwalHari extends Page implements Tables\Contracts\HasTable
                     ->label('Aktif')
                     ->boolean()
                     ->sortable(),
-            ])
-            ->headerActions([
-                CreateAction::make()
-                    ->label('Tambah Jadwal')
-                    ->modalHeading('Tambah Jadwal ' . $this->formatHari($this->hari))
-                    ->schema($this->getFormSchema())
-                    ->createAnother(false)
-                    ->modalSubmitActionLabel('Simpan')
-                    ->modalCancelActionLabel('Batal')
-                    ->using(function (array $data): Jadwal {
-                        $data['kelas_id'] = $this->kelas->id;
-                        $data['hari'] = $this->hari;
-
-                        return Jadwal::create($data);
-                    }),
             ])
             ->recordActions([
                 EditAction::make()
