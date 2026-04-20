@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('jadwals', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('kelas_id')->constrained('kelas')->cascadeOnDelete();
+            $table->foreignId('mapel_id')->constrained('mapels')->cascadeOnDelete();
+            $table->foreignId('guru_id')->constrained('users')->cascadeOnDelete();
+            $table->enum('hari', ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu']);
+            $table->unsignedTinyInteger('jam_ke');
+            $table->boolean('aktif')->default(true);
+            $table->timestamps();
+            $table->unique(['kelas_id', 'hari', 'jam_ke']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('jadwals');
+    }
+};
