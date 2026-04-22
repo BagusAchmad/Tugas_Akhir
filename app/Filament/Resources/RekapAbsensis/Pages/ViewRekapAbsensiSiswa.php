@@ -134,8 +134,7 @@ class ViewRekapAbsensiSiswa extends Page implements Tables\Contracts\HasTable
                             'siswa' => 'Siswa',
                             default => '-',
                         };
-                    })
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    }),
             ])
             ->recordActions([])
             ->toolbarActions([])
