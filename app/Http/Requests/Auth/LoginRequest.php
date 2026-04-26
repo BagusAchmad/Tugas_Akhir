@@ -60,6 +60,14 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if ($user->role === 'siswa' && $user->is_active === false) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun siswa ini sudah nonaktif. Silakan hubungi admin sekolah.',
+            ]);
+        }
+
         Auth::login($user, $this->boolean('remember'));
 
         RateLimiter::clear($this->throttleKey());

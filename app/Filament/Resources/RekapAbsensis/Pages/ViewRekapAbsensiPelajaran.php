@@ -7,12 +7,14 @@ use App\Models\Jadwal;
 use App\Models\Kelas;
 use App\Models\PresensiDetail;
 use App\Models\PresensiSesi;
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 
 class ViewRekapAbsensiPelajaran extends Page implements Tables\Contracts\HasTable
 {
@@ -66,69 +68,117 @@ class ViewRekapAbsensiPelajaran extends Page implements Tables\Contracts\HasTabl
 
     public function table(Table $table): Table
     {
+        $sesis = PresensiSesi::query()
+            ->where('jadwal_id', $this->jadwalRecord->id)
+            ->orderBy('tanggal')
+            ->get();
+
+        $columns = [
+            Tables\Columns\TextColumn::make('no')
+                ->label('No')
+                ->rowIndex(),
+
+            Tables\Columns\TextColumn::make('name')
+                ->label('Nama Siswa')
+                ->searchable()
+                ->sortable(),
+        ];
+
+        foreach ($sesis as $sesi) {
+            $dateFormatted = Carbon::parse($sesi->tanggal)->format('d/m');
+            
+            $columns[] = Tables\Columns\TextColumn::make('sesi_' . $sesi->id)
+                ->label($dateFormatted)
+                ->state(function (User $record) use ($sesi) {
+                    $detail = $record->presensiDetails->firstWhere('presensi_sesi_id', $sesi->id);
+                    
+                    if (! $detail || $sesi->status === 'draft') {
+                        return '-';
+                    }
+
+                    if ($detail->status === 'alfa' && is_null($detail->waktu_isi)) {
+                        return '-';
+                    }
+
+                    return match ($detail->status) {
+                        'hadir' => 'H',
+                        'izin' => 'I',
+                        'sakit' => 'S',
+                        'alfa' => 'A',
+                        default => '-',
+                    };
+                })
+                ->badge()
+                ->color(fn (string $state): string => match ($state) {
+                    'H' => 'success',
+                    'I' => 'warning',
+                    'S' => 'warning',
+                    'A' => 'danger',
+                    default => 'gray',
+                });
+        }
+
+        $columns[] = Tables\Columns\TextColumn::make('total_hadir')
+            ->label('Hadir')
+            ->state(function (User $record) {
+                return $record->presensiDetails->where('status', 'hadir')->count();
+            })
+            ->alignCenter();
+
+        $columns[] = Tables\Columns\TextColumn::make('total_izin')
+            ->label('Izin')
+            ->state(function (User $record) {
+                return $record->presensiDetails->where('status', 'izin')->count();
+            })
+            ->alignCenter();
+
+        $columns[] = Tables\Columns\TextColumn::make('total_sakit')
+            ->label('Sakit')
+            ->state(function (User $record) {
+                return $record->presensiDetails->where('status', 'sakit')->count();
+            })
+            ->alignCenter();
+
+        $columns[] = Tables\Columns\TextColumn::make('total_alfa')
+            ->label('Alfa')
+            ->state(function (User $record) {
+                return $record->presensiDetails
+                    ->where('status', 'alfa')
+                    ->whereNotNull('waktu_isi')
+                    ->count();
+            })
+            ->alignCenter();
+
         return $table
             ->query($this->getTableQuery())
-            ->defaultSort('tanggal', 'asc')
+            ->defaultSort('name', 'asc')
             ->recordAction(null)
             ->recordUrl(null)
-            ->columns([
-                Tables\Columns\TextColumn::make('tanggal')
-                    ->label('Tanggal')
-                    ->date('d/m/Y')
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('hari_tampil')
-                    ->label('Hari')
-                    ->state(fn (PresensiSesi $record) => $this->formatHariDariTanggal($record->tanggal)),
-
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
-                    ->badge()
-                    ->formatStateUsing(fn (?string $state) => match ($state) {
-                        'draft' => 'Belum Dibuka',
-                        'open' => 'Sedang Dibuka',
-                        'closed' => 'Sudah Ditutup',
-                        default => '-',
-                    }),
-
-                Tables\Columns\TextColumn::make('hadir')
-                    ->label('Hadir')
-                    ->state(fn (PresensiSesi $record): int => $this->hitungStatus($record, 'hadir'))
-                    ->alignCenter(),
-
-                Tables\Columns\TextColumn::make('izin')
-                    ->label('Izin')
-                    ->state(fn (PresensiSesi $record): int => $this->hitungStatus($record, 'izin'))
-                    ->alignCenter(),
-
-                Tables\Columns\TextColumn::make('sakit')
-                    ->label('Sakit')
-                    ->state(fn (PresensiSesi $record): int => $this->hitungStatus($record, 'sakit'))
-                    ->alignCenter(),
-
-                Tables\Columns\TextColumn::make('alfa')
-                    ->label('Alfa')
-                    ->state(fn (PresensiSesi $record): int => $this->hitungStatus($record, 'alfa'))
-                    ->alignCenter(),
-            ])
-            ->recordActions([
-                Action::make('lihatSiswa')
-                    ->label('Lihat Siswa')
-                    ->icon('heroicon-o-eye')
-                    ->url(fn (PresensiSesi $record) => RekapAbsensiResource::getUrl('siswa', [
-                        'record' => $this->kelas,
-                        'sesi' => $record->id,
-                    ])),
-            ])
-            ->toolbarActions([]);
+            ->columns($columns)
+            ->recordActions([])
+            ->toolbarActions([])
+            ->paginated(false);
     }
 
     protected function getTableQuery(): Builder
     {
-        return PresensiSesi::query()
-            ->with(['jadwal.mapel', 'jadwal.kelas'])
+        $sesiIds = PresensiSesi::query()
             ->where('jadwal_id', $this->jadwalRecord->id)
-            ->orderBy('tanggal');
+            ->where('status', '!=', 'draft')
+            ->pluck('id')
+            ->toArray();
+
+        return User::query()
+            ->where('role', 'siswa')
+            ->where(function ($query) use ($sesiIds) {
+                $query->where('kelas_id', $this->jadwalRecord->kelas_id)
+                    ->orWhereHas('presensiDetails', function ($q) use ($sesiIds) {
+                        $q->whereIn('presensi_sesi_id', $sesiIds);
+                    });
+            })
+            ->with(['presensiDetails' => function ($q) use ($sesiIds) {
+                $q->whereIn('presensi_sesi_id', $sesiIds);
+            }]);
     }
 
     protected function syncPresensiSesi(Jadwal $jadwal): void
@@ -176,21 +226,7 @@ class ViewRekapAbsensiPelajaran extends Page implements Tables\Contracts\HasTabl
         }
     }
 
-    protected function hitungStatus(PresensiSesi $sesi, string $status): int
-    {
-        if ($sesi->status === 'draft') {
-            return 0;
-        }
 
-        if ($sesi->status === 'open' && $status === 'alfa') {
-            return 0;
-        }
-
-        return PresensiDetail::query()
-            ->where('presensi_sesi_id', $sesi->id)
-            ->where('status', $status)
-            ->count();
-    }
 
     protected function generateTanggalSesi(string $hari, $mulai, $sampai): array
     {

@@ -55,6 +55,12 @@ class PresensiDetailsTable
                 TextColumn::make('status')
                     ->label('Presensi Kamu')
                     ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'hadir', 'Hadir' => 'success',
+                        'izin', 'Izin', 'sakit', 'Sakit' => 'warning',
+                        'alfa', 'Alfa', 'Belum Absen' => 'danger',
+                        default => 'gray',
+                    })
                     ->alignCenter()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'hadir' => 'Hadir',

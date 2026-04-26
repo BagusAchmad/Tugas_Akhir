@@ -100,6 +100,12 @@ class ViewPresensiHari extends Page implements Tables\Contracts\HasTable
                 Tables\Columns\TextColumn::make('presensi_kamu')
                     ->label('Presensi Kamu')
                     ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Hadir' => 'success',
+                        'Izin', 'Sakit' => 'warning',
+                        'Alfa', 'Belum Absen' => 'danger',
+                        default => 'gray',
+                    })
                     ->alignCenter()
                     ->state(function (PresensiSesi $record) {
                         $detail = $record->details->firstWhere('siswa_id', Auth::id());

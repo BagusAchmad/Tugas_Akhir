@@ -92,6 +92,12 @@ class DetailPresensiSesi extends Page implements Tables\Contracts\HasTable
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'hadir', 'Hadir' => 'success',
+                        'izin', 'Izin', 'sakit', 'Sakit' => 'warning',
+                        'alfa', 'Alfa', 'Belum Absen' => 'danger',
+                        default => 'gray',
+                    })
                     ->alignCenter()
                     ->formatStateUsing(function ($state) {
                         return match ($state) {
@@ -181,6 +187,7 @@ class DetailPresensiSesi extends Page implements Tables\Contracts\HasTable
         $siswaIdsAktif = User::query()
             ->where('role', 'siswa')
             ->where('kelas_id', $kelasId)
+            ->where('is_active', true)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -199,9 +206,7 @@ class DetailPresensiSesi extends Page implements Tables\Contracts\HasTable
             );
         }
 
-        PresensiDetail::query()
-            ->where('presensi_sesi_id', $this->sesi->id)
-            ->whereNotIn('siswa_id', $siswaIdsAktif)
-            ->delete();
+        // Do not delete old PresensiDetail records to preserve historical data
+        // for students who become inactive or move classes.
     }
 }

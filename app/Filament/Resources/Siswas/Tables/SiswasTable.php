@@ -2,14 +2,12 @@
 
 namespace App\Filament\Resources\Siswas\Tables;
 
-use Filament\Actions\Action;
-use Filament\Actions\BulkAction;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\EditAction;
-use Filament\Notifications\Notification;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Collection;
 
 class SiswasTable
 {
@@ -39,47 +37,33 @@ class SiswasTable
                     ->label('Kelas')
                     ->placeholder('-')
                     ->sortable(),
+
+                IconColumn::make('is_active')
+                    ->label('Aktif')
+                    ->boolean()
+                    ->sortable(),
+
+                TextColumn::make('keterangan_nonaktif')
+                    ->label('Keterangan')
+                    ->state(fn ($record) => $record->is_active ? '-' : ($record->keterangan_nonaktif ?? '-'))
+                    ->sortable(),
+            ])
+            ->filters([
+                TernaryFilter::make('is_active')
+                    ->label('Status Aktif'),
+
+                SelectFilter::make('kelas_id')
+                    ->label('Kelas/Rombel')
+                    ->relationship('kelas', 'nama')
+                    ->searchable()
+                    ->preload(),
             ])
             ->recordActions([
                 EditAction::make()->label('Edit'),
-
-                Action::make('hapusPermanen')
-                    ->label('Hapus')
-                    ->icon('heroicon-o-trash')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Hapus Akun Siswa?')
-                    ->modalDescription('Data siswa akan dihapus permanen (tidak bisa dikembalikan).')
-                    ->action(function ($record) {
-                        $record->forceDelete();
-
-                        Notification::make()
-                            ->title('Berhasil dihapus')
-                            ->success()
-                            ->send();
-                    }),
             ])
 
             ->toolbarActions([
-                BulkActionGroup::make([
-                    BulkAction::make('hapusTerpilihPermanen')
-                        ->label('Hapus terpilih')
-                        ->icon('heroicon-o-trash')
-                        ->color('danger')
-                        ->requiresConfirmation()
-                        ->modalHeading('Hapus semua yang dipilih?')
-                        ->modalDescription('Data siswa yang dipilih akan dihapus permanen (tidak bisa dikembalikan).')
-                        ->action(function (Collection $records) {
-                            foreach ($records as $record) {
-                                $record->forceDelete();
-                            }
-
-                            Notification::make()
-                                ->title('Data terpilih berhasil dihapus')
-                                ->success()
-                                ->send();
-                        }),
-                ]),
+                // Kept empty to avoid unsafe deletion of students
             ]);
     }
 }

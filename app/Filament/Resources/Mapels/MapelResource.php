@@ -27,7 +27,7 @@ class MapelResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Data Master';
 
-    protected static ?int $navigationSort = 12;
+    protected static ?int $navigationSort = 14;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBookOpen;
 

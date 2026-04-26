@@ -97,6 +97,12 @@ class ViewRekapAbsensiSiswa extends Page implements Tables\Contracts\HasTable
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'hadir', 'Hadir' => 'success',
+                        'izin', 'Izin', 'sakit', 'Sakit' => 'warning',
+                        'alfa', 'Alfa', 'Belum Absen' => 'danger',
+                        default => 'gray',
+                    })
                     ->alignCenter()
                     ->formatStateUsing(function ($state) {
                         return match ($state) {

@@ -58,7 +58,6 @@ class Profil extends Page implements HasForms
         return $schema
             ->components([
                 Section::make('Data Akun')
-                    ->description('Kelola data akun guru yang sedang login.')
                     ->schema([
                         Grid::make(2)
                             ->schema([
@@ -77,14 +76,7 @@ class Profil extends Page implements HasForms
                                         column: 'username',
                                         ignorable: Auth::user(),
                                     ),
-                            ]),
-                    ]),
 
-                Section::make('Ubah Password')
-                    ->description('Password lama tidak dapat ditampilkan. Isi password baru jika ingin mengganti password.')
-                    ->schema([
-                        Grid::make(2)
-                            ->schema([
                                 TextInput::make('password')
                                     ->label('Password Baru')
                                     ->password()

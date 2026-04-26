@@ -21,7 +21,8 @@ class SiswaResource extends Resource
     protected static ?string $model = User::class;
 
     protected static ?string $navigationLabel = 'Akun Siswa';
-    protected static ?int $navigationSort = 4;
+    protected static string|\UnitEnum|null $navigationGroup = 'Data Master';
+    protected static ?int $navigationSort = 12;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
     protected static ?string $modelLabel = 'Akun Siswa';
@@ -71,6 +72,6 @@ class SiswaResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return false;
+        return true;
     }
 }
